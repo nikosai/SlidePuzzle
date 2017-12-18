@@ -4,32 +4,35 @@ public class SlidePuzzle{
 
   public static void main(String[] args){
     
-    for (int n=10;n<50;n++){
-      Node testcase = Node.makeTestCase(n);
-      int ans=0;
+    for (int n=0;n<5000;n++){
+      Node testcase = Node.makeTestCase(50);
+      // int ans=0;
+      AstarSearch as = new AstarSearch(testcase,2);
+      System.out.println(as.launch()+","+as.getAns());
 
-      for (int i=1;i<3;i++){
+      /*
+      for (int i=0;i<3;i++){
         AstarSearch as = new AstarSearch(testcase,i);
-        // System.out.println("  A* using h"+i+": "+as.launch()+", \t"+as.getAns());
-        int cnt = as.launch();
-        if (i==1) {
-          ans = as.getAns();
-          System.out.print(ans+",-1");
-        }
-        if (ans != as.getAns()) System.out.print(",ERR");
-        else System.out.print(","+cnt);
+        System.out.println("  A* using h"+i+": "+as.launch()+", \t"+as.getAns());
+        // int cnt = as.launch();
+        // if (i==1) {
+        //   ans = as.getAns();
+        //   System.out.print(ans+",-1");
+        // }
+        // if (ans != as.getAns()) System.out.print(",ERR");
+        // else System.out.print(","+cnt);
       }
-      System.out.print(",-1");
 
-      for (int i=1;i<3;i++){
+      for (int i=0;i<3;i++){
         IDAstarSearch as = new IDAstarSearch(testcase,i);
-        // System.out.println("IDA* using h"+i+": "+as.launch()+", \t"+as.getAns());
-        int cnt = as.launch();
-        if (ans != as.getAns()) System.out.print(",ERR");
-        else System.out.print(","+cnt);
+        System.out.println("IDA* using h"+i+": "+as.launch()+", \t"+as.getAns());
+        // int cnt = as.launch();
+        // if (ans != as.getAns()) System.out.print(",ERR");
+        // else System.out.print(","+cnt);
       }
 
       System.out.println();
+      */
     }
   }
 }
