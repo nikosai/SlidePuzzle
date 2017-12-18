@@ -3,23 +3,33 @@ import java.util.*;
 public class SlidePuzzle{
 
   public static void main(String[] args){
-    Scanner sc = new Scanner(System.in);
-    int[][] arr = new int[4][4];
-
-    for (int i=0;i<4;i++){
-      for (int j=0;j<4;j++){
-        arr[i][j] = sc.nextInt();
-      }
-    }
     
-    for (int i=0;i<3;i++){
-      AstarSearch as = new AstarSearch(new Node(arr),i);
-      System.out.println("  A* using h"+i+": "+as.launch());
-    }
+    for (int n=10;n<50;n++){
+      Node testcase = Node.makeTestCase(n);
+      int ans=0;
 
-    for (int i=0;i<3;i++){
-      IDAstarSearch as = new IDAstarSearch(new Node(arr),i);
-      System.out.println("IDA* using h"+i+": "+as.launch());
+      for (int i=1;i<3;i++){
+        AstarSearch as = new AstarSearch(testcase,i);
+        // System.out.println("  A* using h"+i+": "+as.launch()+", \t"+as.getAns());
+        int cnt = as.launch();
+        if (i==1) {
+          ans = as.getAns();
+          System.out.print(ans+",-1");
+        }
+        if (ans != as.getAns()) System.out.print(",ERR");
+        else System.out.print(","+cnt);
+      }
+      System.out.print(",-1");
+
+      for (int i=1;i<3;i++){
+        IDAstarSearch as = new IDAstarSearch(testcase,i);
+        // System.out.println("IDA* using h"+i+": "+as.launch()+", \t"+as.getAns());
+        int cnt = as.launch();
+        if (ans != as.getAns()) System.out.print(",ERR");
+        else System.out.print(","+cnt);
+      }
+
+      System.out.println();
     }
   }
 }
@@ -28,6 +38,7 @@ class IDAstarSearch{
   int hnum;
   Node start;
   int cnt;
+  int ans;
 
   IDAstarSearch(Node n, int hnum){
     this.hnum = hnum;
@@ -39,6 +50,10 @@ class IDAstarSearch{
     // Step1
     int limit = start.h(hnum);
     System.err.println("limit: "+limit);
+    if (start.isGoal()) { // start is goal
+      ans = 0;
+      return cnt;
+    }
     while(true){
       // Step2
       Stack<Tuple> st = new Stack<Tuple>();
@@ -64,6 +79,7 @@ class IDAstarSearch{
             if (cnt%500==0) System.err.println(cnt);
             if (n1.isGoal()) { // success
               t1.trace();
+              ans = t1.getG();
               return cnt;
             }
             if (c1 <= limit){
@@ -76,6 +92,7 @@ class IDAstarSearch{
       }
     }
   }
+  int getAns(){ return ans; }
 }
 
 class AstarSearch{
@@ -83,6 +100,7 @@ class AstarSearch{
   ArrayList<Tuple> closed;
   int hnum;
   int cnt;
+  int ans;
 
   AstarSearch(Node n, int hnum){
     open = new PriorityQueue<Tuple>(Comparator.comparing(Tuple::getCost));
@@ -101,6 +119,7 @@ class AstarSearch{
       Node n = e.getNode();
       if (n.isGoal()) { // success
         e.trace();
+        ans = e.getG();
         return cnt;
       }
       cnt++;
@@ -142,6 +161,7 @@ class AstarSearch{
       }
     }
   }
+  int getAns(){ return ans; }
 }
 
 class Tuple{
