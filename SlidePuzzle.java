@@ -2,7 +2,7 @@ import java.util.*;
 
 public class SlidePuzzle{
 
-	public static void main(String[] args){
+  public static void main(String[] args){
     Scanner sc = new Scanner(System.in);
     int[][] arr = new int[4][4];
 
@@ -12,9 +12,9 @@ public class SlidePuzzle{
       }
     }
     
-		AstarSearch as = new AstarSearch(new Node(arr),2);
+    AstarSearch as = new AstarSearch(new Node(arr),2);
     System.out.println(as.launch());
-	}
+  }
 }
 
 class AstarSearch{
@@ -130,15 +130,15 @@ class AstarSearch{
 }
 
 class Node{
-	private int board[][];
+  private int board[][];
   private int x;
   private int y;
-	private static final int size = 4;
-	private static final int[][] goal = {{1,2,3,4},{5,6,7,8},{9,10,11,12},{13,14,15,0}};
+  private static final int size = 4;
+  private static final int[][] goal = {{1,2,3,4},{5,6,7,8},{9,10,11,12},{13,14,15,0}};
   private static final Node goalNode = new Node(goal);
 
-	Node(int[][] board){
-		this.board = board;
+  Node(int[][] board){
+    this.board = board;
     for (int i=0;i<size;i++){
       for (int j=0;j<size;j++){
         if (board[i][j]==0){
@@ -147,7 +147,7 @@ class Node{
         }
       }
     }
-	}
+  }
 
   @Override
   public boolean equals(Object obj){
@@ -197,23 +197,23 @@ class Node{
     }
   }
 
-	int h(int n){
-		int ans = 0;
-		switch(n){
-		case 0:
-			break;
-		case 1:
-			for (int i=0;i<size;i++)
-				for (int j=0;j<size;j++)
-					if (goal[i][j]!=0 && board[i][j]!=goal[i][j]) ans++;
-			break;
-		case 2:
-			for (int i=0;i<size;i++){
-				for (int j=0;j<size;j++){
-					int b = board[i][j];
-					if (b==0) continue;
+  int h(int n){
+    int ans = 0;
+    switch(n){
+    case 0:
+      break;
+    case 1:
+      for (int i=0;i<size;i++)
+        for (int j=0;j<size;j++)
+          if (goal[i][j]!=0 && board[i][j]!=goal[i][j]) ans++;
+      break;
+    case 2:
+      for (int i=0;i<size;i++){
+        for (int j=0;j<size;j++){
+          int b = board[i][j];
+          if (b==0) continue;
           outside:
-					for (int x=0;x<size;x++){
+          for (int x=0;x<size;x++){
             for (int y=0;y<size;y++){
               if (goal[x][y]==b){
                 ans += Math.abs(i-x)+Math.abs(j-y);
@@ -221,9 +221,9 @@ class Node{
               }
             }
           }
-				}
-			}
-		}
-		return ans;
-	}
+        }
+      }
+    }
+    return ans;
+  }
 }
