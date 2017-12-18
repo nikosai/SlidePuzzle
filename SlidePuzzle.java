@@ -12,18 +12,77 @@ public class SlidePuzzle{
       }
     }
     
-    AstarSearch as = new AstarSearch(new Node(arr),2);
-    System.out.println(as.launch());
+    for (int i=0;i<3;i++){
+      AstarSearch as = new AstarSearch(new Node(arr),i);
+      System.out.println("  A* using h"+i+": "+as.launch());
+    }
+
+    for (int i=0;i<3;i++){
+      IDAstarSearch as = new IDAstarSearch(new Node(arr),i);
+      System.out.println("IDA* using h"+i+": "+as.launch());
+    }
+  }
+}
+
+class IDAstarSearch{
+  int hnum;
+  Node start;
+  int cnt;
+
+  IDAstarSearch(Node n, int hnum){
+    this.hnum = hnum;
+    this.start = n;
+    this.cnt = 0;
+  }
+
+  int launch(){
+    // Step1
+    int limit = start.h(hnum);
+    System.err.println("limit: "+limit);
+    while(true){
+      // Step2
+      Stack<Tuple> st = new Stack<Tuple>();
+      st.push(new Tuple(start,null,start.h(hnum)));
+      while (true){
+        // Step3
+        if (st.empty()){
+          limit++;
+          System.err.println("limit: "+limit);
+          break;
+        } else {
+          Tuple t = st.peek();
+          int next = t.getNext();
+          if (next < 4){
+            t.incNext();
+            Node n1 = t.getNode().move(next);
+            if (n1 == null) continue;
+            int g1 = t.getG()+1;
+            int c1 = n1.h(hnum) + g1;
+            Tuple t1 = new Tuple(n1,t,c1,t.getG()+1);
+            cnt++;
+            // System.err.println(st.size());
+            if (cnt%500==0) System.err.println(cnt);
+            if (n1.isGoal()) { // success
+              t1.trace();
+              return cnt;
+            }
+            if (c1 <= limit){
+              st.push(t1);
+            }
+          } else {
+            st.pop();
+          }
+        }
+      }
+    }
   }
 }
 
 class AstarSearch{
-
-  private static final int[] dx = {0,-1,1,0};
-  private static final int[] dy = {-1,0,0,1};
   PriorityQueue<Tuple> open;
   ArrayList<Tuple> closed;
   int hnum;
+  int cnt;
 
   AstarSearch(Node n, int hnum){
     open = new PriorityQueue<Tuple>(Comparator.comparing(Tuple::getCost));
@@ -31,6 +90,7 @@ class AstarSearch{
     this.hnum = hnum;
     // Step1
     open.add(new Tuple(n,null,n.h(hnum)));
+    cnt = 0;
   }
 
   int launch(){
@@ -39,14 +99,16 @@ class AstarSearch{
       Tuple e = open.poll();
       if (e == null) return -1; // failure
       Node n = e.getNode();
-      if (n.isGoal()) {
-        trace(e);
-        return e.getG();
-      } // success
+      if (n.isGoal()) { // success
+        e.trace();
+        return cnt;
+      }
+      cnt++;
+      if (cnt%500==0) System.err.println(cnt);
       // Step3
       closed.add(e);
       for (int i=0; i<4; i++){
-        Node n1 = n.move(dx[i],dy[i]);
+        Node n1 = n.move(i);
         if (n1 == null) continue;
         int g = e.getG();
         Tuple e1 = new Tuple(n1, e, n1.h(hnum)+g+1, g+1);
@@ -80,56 +142,64 @@ class AstarSearch{
       }
     }
   }
+}
 
-  void trace(Tuple t){
+class Tuple{
+  private Node n;
+  private Tuple p;
+  private int c;
+  private int g;
+  private int next;
+
+  Tuple(Node n, Tuple p, int c){
+    this(n,p,c,0);
+  }
+
+  Tuple(Node n, Tuple p, int c, int g){
+    this.n = n;
+    this.p = p;
+    this.c = c;
+    this.g = g;
+    this.next = 0;
+    // System.err.println(this);
+  }
+
+  void incNext(){ next++; }
+
+  void trace(){
     Stack<Node> st = new Stack<Node>();
+    Tuple t = this;
     while (t!=null){
       st.push(t.getNode());
       t = t.getParent();
     }
   }
 
-  class Tuple{
-    private Node n;
-    private Tuple p;
-    private int c;
-    private int g;
+  Integer getCost(){ return c; }
+  Node getNode(){ return n; }
+  Tuple getParent(){ return p; }
+  Integer getG(){ return g; }
+  Integer getNext(){ return next; }
 
-    Tuple(Node n, Tuple p, int c){
-      this(n,p,c,0);
-    }
+  @Override
+  public boolean equals(Object obj){
+    if (this == obj) return true;
+    if (obj == null) return false;
+    if (!(obj instanceof Tuple)) return false;
+    Tuple other = (Tuple) obj;
+    // System.err.println(this.n+"vs "+other.n);
+    return n.equals(other.n);
+  }
 
-    Tuple(Node n, Tuple p, int c, int g){
-      this.n = n;
-      this.p = p;
-      this.c = c;
-      this.g = g;
-      System.err.println(this);
-    }
-
-    Integer getCost(){ return c; }
-    Node getNode(){ return n; }
-    Tuple getParent(){ return p; }
-    Integer getG(){ return g; }
-
-    @Override
-    public boolean equals(Object obj){
-      if (this == obj) return true;
-      if (obj == null) return false;
-      if (!(obj instanceof Tuple)) return false;
-      Tuple other = (Tuple) obj;
-      // System.err.println(this.n+"vs "+other.n);
-      return n.equals(other.n);
-    }
-
-    @Override
-    public String toString(){
-      return "Tuple:(\n"+n+"Parent: "+p+"Cost: "+c+" / g: "+g+")\n";
-    }
+  @Override
+  public String toString(){
+    return "Tuple:(\n"+n+"Parent: "+p+"Cost: "+c+" / g: "+g+")\n";
   }
 }
 
 class Node{
+  private static final int[] dirx = {0,-1,1,0};
+  private static final int[] diry = {-1,0,0,1};
   private int board[][];
   private int x;
   private int y;
@@ -177,11 +247,15 @@ class Node{
     return ret;
   }
 
-  boolean isGoal(){
+  public boolean isGoal(){
     return this.equals(goalNode);
   }
 
-  Node move(int dx, int dy){
+  public Node move(int d){
+    return move(dirx[d],diry[d]);
+  }
+
+  public Node move(int dx, int dy){
     int x1 = x + dx;
     int y1 = y + dy;
     if (x1>=0 && x1<size && y1>=0 && y1<size){
@@ -195,6 +269,25 @@ class Node{
     } else {
       return null;
     }
+  }
+
+  public static Node makeTestCase(int n){
+    Node ret = goalNode;
+    int prev = -1;
+    Random ran = new Random();
+
+    for (int i=0;i<n;i++){
+      while (true){
+        int rnd = ran.nextInt(4);
+        if (rnd == prev) continue;
+        Node n1 = ret.move(rnd);
+        if (n1 == null) continue;
+        ret = n1;
+        break;
+      }
+    }
+
+    return ret;
   }
 
   int h(int n){

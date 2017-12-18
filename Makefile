@@ -8,3 +8,5 @@ null: SlidePuzzle.class
 	java SlidePuzzle < in.txt 2> /dev/null
 clean: 
 	-rm *.class
+out: SlidePuzzle.class
+	java SlidePuzzle < in.txt > out.txt
