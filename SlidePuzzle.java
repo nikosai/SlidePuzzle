@@ -192,8 +192,8 @@ class Node{
   private static final String[] dir = {"L","U","D","R"};
 
   private int board[][]; // 盤面
-  public static final int size = 3;
-  private static final int[][] goal = {{1,2,3},{8,0,4},{7,6,5}};
+  public static final int size = 4;
+  private static final int[][] goal = {{1,2,3,4},{5,6,7,8},{9,10,11,12},{13,14,15,0}};
   
   private final Node p; // 親ノード
   private final Integer c; // コスト（g + h）
