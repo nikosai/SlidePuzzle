@@ -37,7 +37,7 @@ abstract class Search{
   protected int ans = -1; // 最短手数
   private long startTime; // 開始時刻
   private long reqTime = -1; // 所要時間[ns]
-  private static final long timeLimit = 1000000000L; // 1 [s]
+  private static final long timeLimit = 3000000000L; // 3 [s]
 
   // アクセサ
   public int getCnt(){ return cnt; }
@@ -146,12 +146,12 @@ class AstarSearch extends Search{
         ans = n.getG();
         return;
       }
-      cnt++;
       // Step3
       closed.add(n);
       for (int i=0; i<4; i++){
         Node n1 = n.move(i);
         if (n1 == null) continue;
+        cnt++;
         int prev = closed.indexOf(n1);
         if (prev == -1){
           // n'がclosedリストにない
