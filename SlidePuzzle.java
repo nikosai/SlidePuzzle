@@ -99,11 +99,11 @@ class IDAstarSearch{
 }
 
 class AstarSearch{
-  PriorityQueue<Tuple> open;
-  ArrayList<Tuple> closed;
-  int hnum;
-  int cnt;
-  int ans;
+  private PriorityQueue<Tuple> open;
+  private ArrayList<Tuple> closed;
+  private int hnum;
+  private int cnt;
+  private int ans;
 
   AstarSearch(Node n, int hnum){
     open = new PriorityQueue<Tuple>(Comparator.comparing(Tuple::getCost));
