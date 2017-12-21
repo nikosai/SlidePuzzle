@@ -1,257 +1,271 @@
 import java.util.*;
 
+/**
+ * 15パズルの解法についてA*探索及びIDA*探索を行う。
+ * その際の実行時間と探索状態数を測定する。
+ */
 public class SlidePuzzle{
-
   public static void main(String[] args){
-    
-    for (int n=0;n<5000;n++){
-      Node testcase = Node.makeTestCase(50);
-      // int ans=0;
-      AstarSearch as = new AstarSearch(testcase,2);
-      System.out.println(as.launch()+","+as.getAns());
+    for (int n=0;n<1000;n++){
+      int[][] testcase = Node.makeTestCase(50);
+      int ans=0;
 
-      /*
-      for (int i=0;i<3;i++){
-        AstarSearch as = new AstarSearch(testcase,i);
-        System.out.println("  A* using h"+i+": "+as.launch()+", \t"+as.getAns());
-        // int cnt = as.launch();
-        // if (i==1) {
-        //   ans = as.getAns();
-        //   System.out.print(ans+",-1");
-        // }
-        // if (ans != as.getAns()) System.out.print(",ERR");
-        // else System.out.print(","+cnt);
+      for (int i=0;i<6;i++){
+        Search s;
+        if (i<3) s = new AstarSearch(testcase,2-i);
+        else s = new IDAstarSearch(testcase,5-i);
+
+        if (i==0){
+          ans = s.getAns();
+          System.out.print(ans);
+        }
+
+        if (ans != s.getAns()) System.out.print(",ERR,ERR");
+        else System.out.print(","+s.getCnt()+","+s.getTime());
       }
-
-      for (int i=0;i<3;i++){
-        IDAstarSearch as = new IDAstarSearch(testcase,i);
-        System.out.println("IDA* using h"+i+": "+as.launch()+", \t"+as.getAns());
-        // int cnt = as.launch();
-        // if (ans != as.getAns()) System.out.print(",ERR");
-        // else System.out.print(","+cnt);
-      }
-
       System.out.println();
-      */
     }
   }
 }
 
-class IDAstarSearch{
-  int hnum;
-  Node start;
-  int cnt;
-  int ans;
+/**
+ * 探索の抽象クラス。
+ * 測定関係の関数などをここで定義している。
+ */
+abstract class Search{
+  protected int cnt = 0; // 探索状態数
+  protected int ans = -1; // 最短手数
+  private long startTime; // 開始時刻
+  private long reqTime = -1; // 所要時間[ns]
+  private static final long timeLimit = 3000000000L; // 3 [s]
 
-  IDAstarSearch(Node n, int hnum){
-    this.hnum = hnum;
-    this.start = n;
-    this.cnt = 0;
+  // アクセサ
+  public int getCnt(){ return cnt; }
+  public int getAns(){ return ans; }
+  public long getTime(){ return reqTime; }
+  
+  // 探索を行う関数本体。測定の対象となる。
+  abstract protected void launch();
+
+  // launch()を実行し、時間を測定する。
+  protected void run(){
+    this.startTime = System.nanoTime();
+    launch();
+    this.reqTime = timeNow();
   }
 
-  int launch(){
+  // 現在までの実行時間を返す。
+  private long timeNow(){
+    return System.nanoTime() - this.startTime;
+  }
+
+  // 指定のタイムリミットに達しているかを返す。
+  protected boolean timeover(){
+    return timeNow() >= timeLimit;
+  }
+}
+
+// IDA*探索
+class IDAstarSearch extends Search{
+  private int[][] start; // 開始状態
+  private int hnum; // 使用するヒューリスティック関数
+
+  IDAstarSearch(int[][] start, int hnum){
+    this.start = start;
+    this.hnum = hnum;
+    run();
+  }
+
+  protected void launch(){
     // Step1
-    int limit = start.h(hnum);
-    System.err.println("limit: "+limit);
-    if (start.isGoal()) { // start is goal
+    Node startNode = new Node(start, hnum);
+    int limit = startNode.h();
+    if (startNode.isGoal()) { // スタートがゴール
       ans = 0;
-      return cnt;
+      return;
     }
     while(true){
       // Step2
-      Stack<Tuple> st = new Stack<Tuple>();
-      st.push(new Tuple(start,null,start.h(hnum)));
+      Stack<Node> st = new Stack<Node>();
+      st.push(new Node(start, hnum));
       while (true){
+        if (timeover()) { // 時間切れ
+          ans = -1;
+          return;
+        }
         // Step3
         if (st.empty()){
+          // スタックが空なので再スタート
           limit++;
-          System.err.println("limit: "+limit);
           break;
         } else {
-          Tuple t = st.peek();
-          int next = t.getNext();
-          if (next < 4){
-            t.incNext();
-            Node n1 = t.getNode().move(next);
-            if (n1 == null) continue;
-            int g1 = t.getG()+1;
-            int c1 = n1.h(hnum) + g1;
-            Tuple t1 = new Tuple(n1,t,c1,t.getG()+1);
-            cnt++;
-            // System.err.println(st.size());
-            if (cnt%500==0) System.err.println(cnt);
-            if (n1.isGoal()) { // success
-              t1.trace();
-              ans = t1.getG();
-              return cnt;
-            }
-            if (c1 <= limit){
-              st.push(t1);
-            }
-          } else {
+          Node n = st.peek();
+          if (n.getNext() == 4){
+            // 子ノードすべて展開済み
             st.pop();
+            continue;
+          }
+          Node n1 = n.move(n.getNext()); // 子ノード
+          n.incNext();
+          if (n1 == null) continue;
+          cnt++;
+          if (n1.isGoal()) { // 探索成功
+            ans = n1.getG();
+            return;
+          }
+          if (n1.getCost() <= limit){
+            st.push(n1);
           }
         }
       }
     }
   }
-  int getAns(){ return ans; }
 }
 
-class AstarSearch{
-  private PriorityQueue<Tuple> open;
-  private ArrayList<Tuple> closed;
-  private int hnum;
-  private int cnt;
-  private int ans;
+class AstarSearch extends Search{
+  private PriorityQueue<Node> open;
+  private ArrayList<Node> closed;
 
-  AstarSearch(Node n, int hnum){
-    open = new PriorityQueue<Tuple>(Comparator.comparing(Tuple::getCost));
-    closed = new ArrayList<Tuple>();
-    this.hnum = hnum;
+  AstarSearch(int[][] start, int hnum){
+    open = new PriorityQueue<Node>(Comparator.comparing(Node::getCost));
+    closed = new ArrayList<Node>();
     // Step1
-    open.add(new Tuple(n,null,n.h(hnum)));
-    cnt = 0;
+    open.add(new Node(start,hnum));
+    run();
   }
 
-  int launch(){
+  protected void launch(){
     while(true){
       // Step2
-      Tuple e = open.poll();
-      if (e == null) return -1; // failure
-      Node n = e.getNode();
-      if (n.isGoal()) { // success
-        e.trace();
-        ans = e.getG();
-        return cnt;
+      Node n = open.poll();
+      if (n == null || timeover()) { // 時間切れ
+        ans = -1;
+        return;
       }
-      cnt++;
-      if (cnt%500==0) System.err.println(cnt);
+      if (n.isGoal()) { // 探索成功
+        ans = n.getG();
+        return;
+      }
       // Step3
-      closed.add(e);
+      closed.add(n);
       for (int i=0; i<4; i++){
         Node n1 = n.move(i);
         if (n1 == null) continue;
-        int g = e.getG();
-        Tuple e1 = new Tuple(n1, e, n1.h(hnum)+g+1, g+1);
-        int prev = closed.indexOf(e1);
-        // n' is not in closed
+        cnt++;
+        int prev = closed.indexOf(n1);
         if (prev == -1){
-          // n' is in open
-          if (open.contains(e1)){
-            Tuple e_prev = null;
-            for (Tuple t: open){
-              if (t.equals(e1)){
-                e_prev = t;
+          // n'がclosedリストにない
+          if (open.contains(n1)){
+            // n'がopenリストにある
+            Node prevNode = null;
+            for (Node t: open){
+              if (t.equals(n1)){
+                prevNode = t;
                 break;
               }
             }
-            if (e_prev.getCost()>e1.getCost()){
-              open.remove(e_prev);
-              open.add(e1);
+            if (prevNode.getCost()>n1.getCost()){
+              open.remove(prevNode);
+              open.add(n1);
             }
           } else {
-            open.add(e1);
+            // n'がopenリストにない
+            open.add(n1);
           }
-        // n' is in closed
         } else {
-          Tuple e_prev = closed.get(prev);
-          if (e_prev.getCost()>e1.getCost()){
+          // n'がclosedリストにある
+          Node prevNode = closed.get(prev);
+          if (prevNode.getCost()>n1.getCost()){
             closed.remove(prev);
-            open.add(e1);
+            open.add(n1);
           }
         }
       }
     }
   }
-  int getAns(){ return ans; }
 }
 
-class Tuple{
-  private Node n;
-  private Tuple p;
-  private int c;
-  private int g;
-  private int next;
+// 状態ノード
+class Node{
+  private static final int[] dx = {0,-1,1,0};
+  private static final int[] dy = {-1,0,0,1};
+  private static final String[] dir = {"L","U","D","R"};
 
-  Tuple(Node n, Tuple p, int c){
-    this(n,p,c,0);
+  private int board[][]; // 盤面
+  public static final int size = 3;
+  private static final int[][] goal = {{1,2,3},{8,0,4},{7,6,5}};
+  
+  private final Node p; // 親ノード
+  private final Integer c; // コスト（g + h）
+  private final Integer g; // ここまでに要した実コスト
+  private int next = 0; // （IDA*探索で）次に展開すべき子ノード
+  private final Integer hnum; // 使用するヒューリスティック関数
+  private final Integer moveDir; // （空白を）動かした方向
+
+  Node(int[][] board){
+    this(board, null, null, null, null, null);
   }
 
-  Tuple(Node n, Tuple p, int c, int g){
-    this.n = n;
+  Node(int[][] board, Integer hnum){
+    // make start node
+    this.p = null;
+    this.g = 0;
+    this.hnum = hnum;
+    this.board = board;
+    this.c = h();
+    this.moveDir = null;
+  }
+
+  Node(int[][] board, Node p, Integer c, Integer g, Integer hnum, Integer moveDir){
     this.p = p;
     this.c = c;
     this.g = g;
-    this.next = 0;
-    // System.err.println(this);
+    this.hnum = hnum;
+    this.board = board;
+    this.moveDir = moveDir;
   }
 
+  // アクセサ
   void incNext(){ next++; }
-
-  void trace(){
-    Stack<Node> st = new Stack<Node>();
-    Tuple t = this;
-    while (t!=null){
-      st.push(t.getNode());
-      t = t.getParent();
-    }
-  }
-
   Integer getCost(){ return c; }
-  Node getNode(){ return n; }
-  Tuple getParent(){ return p; }
+  Node getParent(){ return p; }
   Integer getG(){ return g; }
   Integer getNext(){ return next; }
+  Integer getDir(){ return moveDir; }
 
-  @Override
-  public boolean equals(Object obj){
-    if (this == obj) return true;
-    if (obj == null) return false;
-    if (!(obj instanceof Tuple)) return false;
-    Tuple other = (Tuple) obj;
-    // System.err.println(this.n+"vs "+other.n);
-    return n.equals(other.n);
-  }
-
-  @Override
-  public String toString(){
-    return "Tuple:(\n"+n+"Parent: "+p+"Cost: "+c+" / g: "+g+")\n";
-  }
-}
-
-class Node{
-  private static final int[] dirx = {0,-1,1,0};
-  private static final int[] diry = {-1,0,0,1};
-  private int board[][];
-  private int x;
-  private int y;
-  private static final int size = 4;
-  private static final int[][] goal = {{1,2,3,4},{5,6,7,8},{9,10,11,12},{13,14,15,0}};
-  private static final Node goalNode = new Node(goal);
-
-  Node(int[][] board){
-    this.board = board;
-    for (int i=0;i<size;i++){
-      for (int j=0;j<size;j++){
-        if (board[i][j]==0){
-          x = i;
-          y = j;
-        }
-      }
+  // そのノードに至る手順を返す。
+  // 導いたゴールノードに対して用いれば、最短手順を得られる。
+  String trace(){
+    Stack<Node> st = new Stack<Node>();
+    Node t = this;
+    while (t!=null){
+      st.push(t);
+      t = t.getParent();
     }
+    String ans = "";
+    st.pop();
+    while (!(st.empty())){
+      t = st.pop();
+      ans += dir[t.getDir()];
+    }
+    return ans;
   }
 
   @Override
   public boolean equals(Object obj){
     if (this == obj) return true;
     if (obj == null) return false;
-    if (!(obj instanceof Node)) return false;
-    Node other = (Node) obj;
-    if (size!=other.size) return false;
+    int[][] otherboard = null;
+    if (obj instanceof int[][]){
+      otherboard = (int[][]) obj;
+    } else if (obj instanceof Node) {
+      if (size!=((Node) obj).size) return false;
+      else otherboard = ((Node) obj).board;
+    } else return false;
+
     for (int i=0;i<size;i++){
       for (int j=0;j<size;j++){
-        if (board[i][j]!=other.board[i][j]) return false;
+        if (board[i][j]!=otherboard[i][j]) return false;
       }
     }
     return true;
@@ -267,35 +281,52 @@ class Node{
       // if (i == size - 1) break;
       ret += "\n";
     }
+    ret += "p[" + p + "],c[" + c + "],g[" + g + "],d[" + moveDir + "]\n";
     return ret;
   }
 
+  // このノードがゴールか否かを返す
   public boolean isGoal(){
-    return this.equals(goalNode);
+    return this.equals(goal);
   }
 
+  // 指定した方向に（空白を）動かした次のノードを返す
   public Node move(int d){
-    return move(dirx[d],diry[d]);
+    int[][] ret = move(board,d);
+    if (ret == null) return null;
+    else return new Node(ret,this,h(ret,hnum)+g+1,g+1,hnum,d);
   }
 
-  public Node move(int dx, int dy){
-    int x1 = x + dx;
-    int y1 = y + dy;
+  // 指定した方向に（空白を）動かした盤面を返す
+  private static int[][] move(int[][] b, int d){
+    int x=-1,y=-1;
+    for (int i=0;i<size;i++){
+      for (int j=0;j<size;j++){
+        if (b[i][j]==0){
+          x = i;
+          y = j;
+          break;
+        }
+      }
+    }
+    int x1 = x + dx[d];
+    int y1 = y + dy[d];
     if (x1>=0 && x1<size && y1>=0 && y1<size){
-      int[][] board1 = new int[size][size];
+      int[][] b1 = new int[size][size];
       for (int i=0;i<size;i++)
         for (int j=0;j<size;j++)
-          board1[i][j] = board[i][j];
-      board1[x][y] = board1[x1][y1];
-      board1[x1][y1] = 0;
-      return new Node(board1);
+          b1[i][j] = b[i][j];
+      b1[x][y] = b1[x1][y1];
+      b1[x1][y1] = 0;
+      return b1;
     } else {
       return null;
     }
   }
 
-  public static Node makeTestCase(int n){
-    Node ret = goalNode;
+  // ゴールからn手動かしたテストケース盤面を作成する
+  public static int[][] makeTestCase(int n){
+    int[][] ret = goal;
     int prev = -1;
     Random ran = new Random();
 
@@ -303,9 +334,10 @@ class Node{
       while (true){
         int rnd = ran.nextInt(4);
         if (rnd == prev) continue;
-        Node n1 = ret.move(rnd);
+        int[][] n1 = move(ret,rnd);
         if (n1 == null) continue;
         ret = n1;
+        prev = rnd;
         break;
       }
     }
@@ -313,9 +345,14 @@ class Node{
     return ret;
   }
 
-  int h(int n){
+  int h(){
+    return h(board,hnum);
+  }
+
+  // ヒューリスティック関数
+  public static int h(int[][] board, int hnum){
     int ans = 0;
-    switch(n){
+    switch(hnum){
     case 0:
       break;
     case 1:
