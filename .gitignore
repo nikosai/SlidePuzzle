@@ -1,4 +1,5 @@
-*.txt
-*.class
-*.csv
-*.csv#
+*
+!./.gitignore
+!./SlidePuzzle.java
+!./LICENSE
+!./Makefile
