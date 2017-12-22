@@ -6,7 +6,7 @@ import java.util.*;
  */
 public class SlidePuzzle{
   public static void main(String[] args){
-    for (int n=0;n<1000;n++){
+    for (int n=0;n<2000;n++){
       int[][] testcase = Node.makeTestCase(50);
       int ans=0;
 
@@ -37,7 +37,7 @@ abstract class Search{
   protected int ans = -1; // 最短手数
   private long startTime; // 開始時刻
   private long reqTime = -1; // 所要時間[ns]
-  private static final long timeLimit = 3000000000L; // 3 [s]
+  private static final long timeLimit = 5000000000L; // 5 [s]
 
   // アクセサ
   public int getCnt(){ return cnt; }
