@@ -28,6 +28,70 @@ public class SlidePuzzle{
   }
 }
 
+// A*探索
+class AstarSearch extends Search{
+  private PriorityQueue<Node> open;
+  private ArrayList<Node> closed;
+
+  AstarSearch(int[][] start, int hnum){
+    open = new PriorityQueue<Node>(Comparator.comparing(Node::getCost));
+    closed = new ArrayList<Node>();
+    // Step1
+    open.add(new Node(start,hnum));
+    run();
+  }
+
+  protected void launch(){
+    while(true){
+      // Step2
+      Node n = open.poll();
+      if (n == null || timeover()) { // 時間切れ
+        ans = -1;
+        return;
+      }
+      if (n.isGoal()) { // 探索成功
+        ans = n.getG();
+        return;
+      }
+      // Step3
+      closed.add(n);
+      for (int i=0; i<4; i++){
+        Node n1 = n.move(i);
+        if (n1 == null) continue;
+        cnt++;
+        int prev = closed.indexOf(n1);
+        if (prev == -1){
+          // n'がclosedリストにない
+          if (open.contains(n1)){
+            // n'がopenリストにある
+            Node prevNode = null;
+            for (Node t: open){
+              if (t.equals(n1)){
+                prevNode = t;
+                break;
+              }
+            }
+            if (prevNode.getCost()>n1.getCost()){
+              open.remove(prevNode);
+              open.add(n1);
+            }
+          } else {
+            // n'がopenリストにない
+            open.add(n1);
+          }
+        } else {
+          // n'がclosedリストにある
+          Node prevNode = closed.get(prev);
+          if (prevNode.getCost()>n1.getCost()){
+            closed.remove(prev);
+            open.add(n1);
+          }
+        }
+      }
+    }
+  }
+}
+
 /**
  * 探索の抽象クラス。
  * 測定関係の関数などをここで定義している。
@@ -115,69 +179,6 @@ class IDAstarSearch extends Search{
           }
           if (n1.getCost() <= limit){
             st.push(n1);
-          }
-        }
-      }
-    }
-  }
-}
-
-class AstarSearch extends Search{
-  private PriorityQueue<Node> open;
-  private ArrayList<Node> closed;
-
-  AstarSearch(int[][] start, int hnum){
-    open = new PriorityQueue<Node>(Comparator.comparing(Node::getCost));
-    closed = new ArrayList<Node>();
-    // Step1
-    open.add(new Node(start,hnum));
-    run();
-  }
-
-  protected void launch(){
-    while(true){
-      // Step2
-      Node n = open.poll();
-      if (n == null || timeover()) { // 時間切れ
-        ans = -1;
-        return;
-      }
-      if (n.isGoal()) { // 探索成功
-        ans = n.getG();
-        return;
-      }
-      // Step3
-      closed.add(n);
-      for (int i=0; i<4; i++){
-        Node n1 = n.move(i);
-        if (n1 == null) continue;
-        cnt++;
-        int prev = closed.indexOf(n1);
-        if (prev == -1){
-          // n'がclosedリストにない
-          if (open.contains(n1)){
-            // n'がopenリストにある
-            Node prevNode = null;
-            for (Node t: open){
-              if (t.equals(n1)){
-                prevNode = t;
-                break;
-              }
-            }
-            if (prevNode.getCost()>n1.getCost()){
-              open.remove(prevNode);
-              open.add(n1);
-            }
-          } else {
-            // n'がopenリストにない
-            open.add(n1);
-          }
-        } else {
-          // n'がclosedリストにある
-          Node prevNode = closed.get(prev);
-          if (prevNode.getCost()>n1.getCost()){
-            closed.remove(prev);
-            open.add(n1);
           }
         }
       }
